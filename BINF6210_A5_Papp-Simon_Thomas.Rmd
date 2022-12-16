@@ -2,7 +2,6 @@
 title: "BINF6210_A5_Papp-Simon_Thomas"
 author: "Thomas Papp-Simon"
 date: "2022-12-16"
-link: https://github.com/taps99/BINF6210-Assignment5
 output: pdf_document
 ---
 ---
@@ -42,6 +41,8 @@ library(factoextra, quietly = TRUE)
 library(gridExtra, quietly = TRUE)
 
 ```
+
+GitHub Repository Link: https://github.com/taps99/BINF6210-Assignment5
 
 ## Introduction
 
