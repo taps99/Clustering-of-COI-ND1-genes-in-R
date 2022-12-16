@@ -1,9 +1,17 @@
 ---
+title: "BINF6210_A5_Papp-Simon_Thomas"
+author: "Thomas Papp-Simon"
+date: "2022-12-16"
+link: https://github.com/taps99/BINF6210-Assignment5
+output: pdf_document
+---
+---
 title: "BINF6210 - Assignment 5"
 author: "Thomas Papp-Simon"
 date: "2022-12-16"
 output: pdf_document
 ---
+
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -18,7 +26,6 @@ knitr::opts_chunk$set(echo = TRUE)
 # BiocManager::install(c("Biostrings"))
 # install.packages("ape")
 # install.packages("stringi")
-# install.packages("RSQLite")
 # install.packages("kmer")
 # install.packages("clValid")
 # install.packages("factoextra")
@@ -29,9 +36,7 @@ library(tidyverse, quietly = TRUE)
 library(Biostrings, quietly = TRUE)
 library(stringi, quietly = TRUE)
 library(ape, quietly = TRUE)
-library(RSQLite, quietly = TRUE)
 library(kmer, quietly = TRUE)
-library(ape, quietly = TRUE)
 library(clValid, quietly = TRUE)
 library(factoextra, quietly = TRUE)
 library(gridExtra, quietly = TRUE)
@@ -65,7 +70,8 @@ COI_search
 ND1_search <- entrez_search(db = "nuccore", term = "Microchiroptera[ORGN] AND ND1[Gene] AND 600:1400[SLEN]", retmax = 5000)
 ND1_search
 
-# Sourced the FetchFastaFiles and MergeFastaFiles functions from the Entrez_Functions.R script to obtain sequence data using web history objects since my request was too large for the normal entrez_fetch function.
+# Sourced the FetchFastaFiles and MergeFastaFiles functions from the Entrez_Functions.R script to obtain sequence data using web history
+# objects since my request was too large for the normal entrez_fetch function.
 source("Entrez_Functions.R")
 #FetchFastaFiles(searchTerm = "Microchiroptera[ORGN] AND COI[Gene] AND 500:700[SLEN]", seqsPerFile = 5000, fastaFileName = "COI_fetch.fasta")
 #FetchFastaFiles(searchTerm = "Microchiroptera[ORGN] AND ND1[Gene] AND 600:1400[SLEN]", seqsPerFile = 5000, fastaFileName = "ND1_fetch.fasta")
@@ -94,7 +100,8 @@ length(unique(dfND1$Species_Name)) # data from 240 unique species
 
 
 # Removal of identical sequences before my analysis.
-# For this analysis, I've decided to remove identical sequences from my data. I did this because I wanted to remove any noise in my data that would create artificially large clusters. 
+# For this analysis, I've decided to remove identical sequences from my data. I did this because I wanted to remove any noise 
+# in my data that would create artificially large clusters. 
 
 length(unique(dfCOI$Sequence)) # 9685 unique sequences
 length(unique(dfND1$Sequence)) # 1469 unique sequences
@@ -111,8 +118,14 @@ identical(length(dfND1$Sequence), length(unique(dfND1$Sequence))) # TRUE
 
 
 # Cleaning up the sequence data for both genes.
-# In terms of sample size, I wanted a similar sample size for both COI and ND1 data sets. Therefore, I used the sample_n function to equalize the amount of data for both genes by random sampling. Since the ND1 dataset had much less data than COI, I matched the amount of COI data to the amount of ND1 data. 
-# Also filtering out any missing sequences, and removing all N's from the beginning and ends of our sequences as well as all -'s that are in our sequences and making a new 'Nucleotides' column to store the cleaned up version of the raw sequence data. Finally, filtering the amount of N's allowed within our sequences. I chose 0.1% because I wanted to ensure that I had high quality sequences for my analysis. This is necessary to do in order to get an accurate count of k-mer frequencies for each of my sequences.
+# In terms of sample size, I wanted a similar sample size for both COI and ND1 data sets. Therefore, I used the sample_n function to equalize
+# the amount of data for both genes by random sampling. 
+# Since the ND1 dataset had much less data than COI, I matched the amount of COI data to the amount of ND1 data. 
+# Also filtering out any missing sequences, and removing all N's from the beginning and ends of our sequences as well as all -'s 
+# that are in our sequences and making a new 'Nucleotides' column to store the cleaned up version of the raw sequence data. 
+# Finally, filtering the amount of N's allowed within our sequences. I chose 0.1% because I wanted to ensure that I had 
+# high quality sequences for my analysis. This is necessary to do in order to get an accurate count of k-mer frequencies 
+# for each of my sequences.
 dfCOI_cleaned <- dfCOI %>%
   sample_n(length(dfND1$Sequence)) %>%
   filter(!is.na(Sequence)) %>%
@@ -140,7 +153,8 @@ summary(str_count(dfND1_cleaned$Nucleotides)) # 818.9 is the mean length for ND1
 dfCombine <- rbind(dfCOI_cleaned, dfND1_cleaned)
 dfhisto <- dfCombine %>%
   select(Seq_Len, gene)
-# From these summary stats, we can see that the average ND1 sequence is longer than the average COI sequence. The literature states the average ND1 sequence length is around 950-1000 base pairs whereas the average COI sequences is around 650 base pairs.
+# From these summary stats, we can see that the average ND1 sequence is longer than the average COI sequence. 
+# The literature states the average ND1 sequence length is around 950-1000 base pairs whereas the average COI sequences is around 650 base pairs.
 
 
 # Figure 1: Histogram
@@ -172,7 +186,8 @@ histogram
 #### Figure 1: Overlapping histograms comparing distribution of sequence lengths for both COI (pink) and ND1 (green). Both genes have a similar sample size (COI: n = 1412, ND1: n = 1267). A wider distribution of sequence length is clearly demonstrated for the ND1 gene, ranging from 600 to over 1000 bpm whereas COI sequences show little variation in their sequence length (mostly around \~650 bp).
 
 ```{r}
-# After looking at the distribution of the ND1 gene length, I realize that it would probably be better if I just removed the few sequences that are much longer than the rest.
+# After looking at the distribution of the ND1 gene length, I realize that it would probably be better if I just 
+# removed the few sequences that are much longer than the rest.
 dfND1_cleaned <- dfND1_cleaned %>%
   filter(Seq_Len < 1200)
 
@@ -182,7 +197,7 @@ nrow(dfND1_cleaned) # removed 11 sequences that were over 1200 base pairs long.
 
 ## Main Software Tools Description
 
-# For the unsupervised clutsering of the COI and ND1 sequences, I chose to cluster them based on k-mer frequencies using the PAM clustering method. I chose to use k-mer frequencies as the sequence feature because I was interested in analyzing a larger data set for this analysis. If I were to use an alignment-based approach, it would not be feasible to use such a larger data set. Then, I chose a partitioning method (PAM) rather than the hierarchical clustering method for a few reasons. First, clusters made by partitioning are computed faster than those created by hierarchical clustering. Also, they are less sensitive to any potential outliers in the data. In particular, the PAM algorithm is a more robust version of the k-means algorithm. (Kaufman, 1990). During my analysis, I used the pam() function from the cluster package (Maechler et al., 2019). I was able to pick between which metric to use for cluster. I chose to use the 'Manhattan' metric for the PAM clustering because it also less sensitive to outliers compared to using Euclidean distances since it uses absolute values and is easier to interpret compared to Euclidean distances.
+For the unsupervised clutsering of the COI and ND1 sequences, I chose to cluster them based on k-mer frequencies using the PAM clustering method. I chose to use k-mer frequencies as the sequence feature because I was interested in analyzing a larger data set for this analysis. If I were to use an alignment-based approach, it would not be feasible to use such a larger data set. Then, I chose a partitioning method (PAM) rather than the hierarchical clustering method for a few reasons. First, clusters made by partitioning are computed faster than those created by hierarchical clustering. Also, they are less sensitive to any potential outliers in the data. In particular, the PAM algorithm is a more robust version of the k-means algorithm. (Kaufman, 1990). During my analysis, I used the pam() function from the cluster package (Maechler et al., 2019). I was able to pick between which metric to use for cluster. I chose to use the 'Manhattan' metric for the PAM clustering because it also less sensitive to outliers compared to using Euclidean distances since it uses absolute values and is easier to interpret compared to Euclidean distances.
 
 ```{r}
 
@@ -191,9 +206,10 @@ nrow(dfND1_cleaned) # removed 11 sequences that were over 1200 base pairs long.
 # Obtaining k-mer frequencies and then calculating pairwise distance matrix among sequences for each gene.
 # This step can be done using the kdistance() from the kmer package. 
 
-# To use the kdistance() function, I first need to convert my sequence data from the dataframe into a DNAbin object using the as.DNAbin() function from the ape package.
+# To use the kdistance() function, I first need to convert my sequence data from the dataframe into a DNAbin object 
+# using the as.DNAbin() function from the ape package.
 
-#
+
 dfCOI_cleaned$Nucleotides <- DNAStringSet(dfCOI_cleaned$Nucleotides) # Convert sequence data into a DNAStringSet object
 dnabin_COI <- as.DNAbin(dfCOI_cleaned$Nucleotides) # Convert to DNAbin object before generating distance matrix.
 
@@ -205,7 +221,10 @@ dnabin_ND1 <- as.DNAbin(dfND1_cleaned$Nucleotides) # Convert to DNAbin object be
 # dfCOI_cleaned$Nucleotides <- as.character(dfCOI_cleaned$Nucleotides)
 # dfND1_cleaned$Nucleotides <- as.character(dfND1_cleaned$Nucleotides)
 
-# Generate pairwise distance matrix using k-mer counts with the kdistance() function from the kmer package. For my analysis, I would like to compare the clustering for both genes between a k-mer value of 4 to a k-mer value of 6. Over the course of this project, I found that a k-mer value of 6 was the highest I should use for my project since the computation time for higher k-mer values took far too long.
+# Generate pairwise distance matrix using k-mer counts with the kdistance() function from the kmer package. 
+# For my analysis, I would like to compare the clustering for both genes between a k-mer value of 4 to a k-mer value of 6. 
+# Over the course of this project, I found that a k-mer value of 6 was the highest I should use for my project since the 
+# computation time for higher k-mer values took far too long.
 # This step can take a few minutes depending on how fast your computer is because the resulting matrix is large.
 
 # Distance matrices for k-mers of length 4
@@ -218,7 +237,8 @@ distmatrix_ND1_k6 <- kmer::kdistance(dnabin_ND1, k = 6, method = "manhattan")
 
 
 # Removal of outliers and performing imputation to replace those values with the mean of the respective distance matrix.
-# I've decided to forgo the imputation of outliers with the mean value of the distance matrix, as it was resulting in even worse clustering for my analysis. I've left the code that I used below to show what I did prior to making this decision.
+# I've decided to forgo the imputation of outliers with the mean value of the distance matrix, as it was resulting in even 
+# worse clustering for my analysis. I've left the code that I used below to show what I did prior to making this decision.
 
 # COI_4_dist_mean <- mean(distmatrix_COI_k4)
 # COI_4_outlier <- boxplot(distmatrix_COI_k4,plot=FALSE)$out
@@ -242,9 +262,12 @@ distmatrix_ND1_k6 <- kmer::kdistance(dnabin_ND1, k = 6, method = "manhattan")
 # Choosing the optimal number of clusters 
 # In order to use the PAM algorithm for clustering, there needs to be a pre-determined number of clusters. In order to avoid arbitrarily choosing this number, I searched for methods that could give me an idea on what the optimal number of clusters would be based on the distance matrices generated by the kdistance() function.
 
-# Generating plots for different methods (average silhouette method, elbow method (within cluster sums of squares) to determine the optimal number of clusters to use for my analysis by using the fviz_nbclust() function from the factoextra package. I specified the FUNcluster argument to use the PAM clustering algorithm.
+# Generating plots for different methods (average silhouette method, elbow method (within cluster sums of squares) to determine the optimal 
+# number of clusters to use for my analysis by using the fviz_nbclust() function from the factoextra package. 
+# I specified the FUNcluster argument to use the PAM clustering algorithm.
 # The generation of these plots can take some time due to the large distance matrix generated from my sequence data.
-# I've decided to forgo the use of the elbow method plots for this part, since they were not very informative and did not offer a clear number for the optimal number of clusters to use. I've left the code to generate the elbow plots just in case.
+# I've decided to forgo the use of the elbow method plots for this part, since they were not very informative and did not offer 
+# a clear number for the optimal number of clusters to use. I've left the code to generate the elbow plots just in case.
  
 # Silhouette method and elbow method plots for COI and ND1 with a k-mer length of 4.
 # COI
@@ -293,9 +316,14 @@ grid.arrange(silhouette_method_plot_COI_4, silhouette_method_plot_ND1_4, silhoue
 
 ```{r}
 
-# There are a few functions that can be used to cluster sequences based on k-mer frequencies, which depends on the clustering algorithm that one might choose for their analysis. I will be sticking to the partition around medoids (PAM) clustering algorithm, which is a more robust version of the k-means algorithm that is commonly used in unsupervised machine learning. 
+# There are a few functions that can be used to cluster sequences based on k-mer frequencies, which depends on the 
+# clustering algorithm that one might choose for their analysis. I will be sticking to the partition around medoids (PAM) 
+# clustering algorithm, which is a more robust version of the k-means algorithm that is commonly used in unsupervised machine learning. 
 
-# The pam() function from the cluster package uses the distance matrix generated from the kdistance() function for clustering. It is important to note that for kmeans clustering, the number of clusters is pre-determined, which is specified through the centers argument. For this analysis, I will be using the optimal number of clusters generated from the silhouette and WSS methods from Figure 2 for each matrix.
+# The pam() function from the cluster package uses the distance matrix generated from the kdistance() function for clustering. 
+# It is important to note that for kmeans clustering, the number of clusters is pre-determined, which is specified through the 
+# centers argument. For this analysis, I will be using the optimal number of clusters generated from the silhouette 
+# methods from Figure 2 for each matrix.
 
 # Generating clusters
 pam_COI_4 <- cluster::pam(distmatrix_COI_k4, k = 2, metric = "manhattan")
@@ -303,7 +331,10 @@ pam_ND1_4 <- cluster::pam(distmatrix_ND1_k4, k = 2, metric = "manhattan")
 pam_COI_6 <- cluster::pam(distmatrix_COI_k6, k = 2, metric = "manhattan")
 pam_ND1_6 <- cluster::pam(distmatrix_ND1_k6, k = 2, metric = "manhattan")
 
-# Plotting the clusters using the fviz_cluster() function from the factoextra package. Before using the function, I had to create add a 'data' variable to the pam object, and assign it to the distance matrix that was used to compute the clusters for that object.
+# Plotting the clusters using the fviz_cluster() function from the factoextra package. 
+# Before using the function, I had to create add a 'data' variable to the pam object, and assign it 
+# to the distance matrix that was used to compute the clusters for that object.
+
 # COI clusters with k-mer length of 4
 pam_COI_4$data = distmatrix_COI_k4
 pamplot_COI_4 <- fviz_cluster(pam_COI_4, main = "PAM Clusters for COI (k-mer = 4)") +
@@ -478,7 +509,7 @@ The next steps in this research would involve using alternative clustering metho
 
 I would like to acknowledge Jesse Wolf and Nishita Sharif for providing me with valuable insight and knowledge to help me during this project.
 
-## References
+## Published References
 
 Arora, P. et al. (2016) Analysis of K-Means and K-Medoids Algorithm For Big Data, Procedia Computer Science. <https://doi.org/10.1016/j.procs.2016.02.095>
 
@@ -489,3 +520,55 @@ Kaisers, W., Schwender, H., & Schaal, H. (2018). Hierarchical Clustering of DNA 
 Kaufman, L. & Rousseeuw, P. J. (1990) Partitioning Around Medoids (Program PAM). In Finding Groups in Data (pp. 68--125). John Wiley & Sons, Ltd. <https://doi.org/10.1002/9780470316801.ch2>
 
 Kislyuk, A., Bhatnagar, S., Dushoff, J., & Weitz, J. S. (2009). Unsupervised statistical clustering of environmental shotgun sequences. BMC Bioinformatics, 10(1), 316. <https://doi.org/10.1186/1471-2105-10-316>
+
+## References for R packages 
+
+Auguie, B. (2017. gridExtra: Miscellaneous Functions for "Grid" Graphics.
+
+Brock G, Pihur V, Datta S, Datta S (2008). “clValid: An R Package for Cluster Validation.” Journal of Statistical Software, 25(4), 1–22. https://www.jstatsoft.org/v25/i04/. 
+
+Gagolewski M., stringi: Fast and portable character string processing in R, Journal of Statistical Software 103(2), 2022, 1–59, doi:10.18637/jss. v103. i02.
+
+Kassambara, A. and Mundt, F. (2020) Factoextra: Extract and Visualize the Results of Multivariate Data Analyses. R Package Version 1.0.7. 
+
+Pagès H, Aboyoun P, Gentleman R, DebRoy S (2022). Biostrings: Efficient manipulation of biological strings. R package version 2.66.0, https://bioconductor.org/packages/Biostrings. 
+
+Wickham H, Girlich M (2022). tidyr: Tidy Messy Data. https://tidyr.tidyverse.org, https://github.com/tidyverse/tidyr. 
+
+Wilkinson S (2018). kmer: an R package for fast alignment-free clustering of biological sequences. doi:10.5281/zenodo.1227690, https://cran.r-project.org/package=kmer. 
+
+Winter, D. (2017). rentrez: an R package for the NCBI eUtils API. The R Journal, 9, 520–526.
+
+
+## Other sources that were consulted:
+
+https://www.r-bloggers.com/2017/02/finding-optimal-number-of-clusters/
+
+https://www.statology.org/elbow-method-in-r/
+
+https://cran.r-project.org/web/packages/gridExtra/vignettes/arrangeGrob.html
+
+https://uc-r.github.io/kmeans_clustering#kmeans
+
+https://stats.stackexchange.com/questions/145192/what-is-the-benefit-of-using-manhattan-distance-for-k-medoid-than-using-euclidea
+
+https://stackoverflow.com/questions/61501842/overlaying-two-histograms-with-different-rows-using-ggplot2
+
+https://stackoverflow.com/questions/25571547/select-unique-values-with-select-function-in-dplyr-library
+
+https://lgatto.github.io/IntroMachineLearningWithR/unsupervised-learning.html#how-does-k-means-work
+
+https://datascience.stackexchange.com/questions/48883/what-could-this-mean-if-your-elbow-curve-looks-like-this
+
+https://stackoverflow.com/questions/28890627/r-how-do-i-concatenate-decimal-number-value-and-string-in-print-statement
+
+https://www.datanovia.com/en/lessons/k-medoids-in-r-algorithm-and-practical-examples/
+
+http://www.sthda.com/english/articles/29-cluster-validation-essentials/96-determiningthe-optimal-number-of-clusters-3-must-know-methods/#computing-the-number-of-clusters-using-r
+
+http://www.sthda.com/english/articles/24-ggpubr-publication-ready-plots/81-ggplot2-easy-way-to-mix-multiple-graphs-on-the-same-page/
+
+https://www.r-bloggers.com/2020/01/how-to-remove-outliers-in-r/
+
+https://stackoverflow.com/questions/61445767/plot-pam-cluster-results-with-fviz-clust
+
