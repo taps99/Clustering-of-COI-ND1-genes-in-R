@@ -30,6 +30,10 @@ Source of dataset citation: Nucleotide. Bethesda (MD): National Library of Medic
 Center for Biotechnology Information; 2004 – 2022-12-15. Available from: https://www.ncbi.nlm.nih.gov/
 nucleotide/
 
+
+![image](https://github.com/taps99/Clustering-of-COI-ND1-genes-in-R/assets/88162045/84b0e0f5-711e-484e-a1cc-882a04a3e63b)
+
+
 # Results & Discussion
 By looking at the results of this analysis, it is clear to see that the ND1 gene exhibits far better clustering
 patterns than the COI gene within the family Microchiroptera. The cluster plots demonstrates this obvious
